@@ -127,6 +127,36 @@ class Fingerprint :
         s += f"total   : {self . total_bases()}\n"
         return s
 
+    def __add__( self, other ) :
+        if not isinstance( other, Fingerprint ) :
+            return NotImplemented
+        fp = self . content
+        for key in [ 'A', 'C', 'G', 'T', 'N' ] :
+            fp[ key ] = [ fp[ key ][ i ] + other . content[ key][ i ] for i in range( len( fp[ key ] ) ) ]
+            self . update_digest()
+        data = { "fingerprint" : fp, "fingerprint-digest" : self . digest  }
+        res = Fingerprint( data, self . src )
+        res . update_digest()
+        return res
+
+    def __sub__( self, other ) :
+        if not isinstance( other, Fingerprint ) :
+            return NotImplemented
+        fp = self . content
+        for key in [ 'A', 'C', 'G', 'T', 'N' ] :
+            fp[ key ] = [ fp[ key ][ i ] - other . content[ key][ i ] for i in range( len( fp[ key ] ) ) ]
+            self . update_digest()
+        data = { "fingerprint" : fp, "fingerprint-digest" : self . digest  }
+        res = Fingerprint( data, self . src )
+        res . update_digest()
+        return res
+
+    def __eq__( self, other ) :
+        if not isinstance( other, Fingerprint ) : return NotImplemented
+        if not self . check_digest() : return False
+        if not other . check_digest() : return False
+        return self . digest == other . digest
+
     @classmethod
     def fromFile( cls, filename ) :
         src = f"file:{filename}"
@@ -194,18 +224,6 @@ class Fingerprint :
 
     def total_diff( self, other ) :
         return sum( map( lambda a : self . diff( other, a ), [ 'A', 'C', 'G', 'T' ] ) )
-
-    def add( self, other ) :
-        for key in [ 'A', 'C', 'G', 'T', 'N' ] :
-            tmp = [ self . content[ key ][ i ] + other . content[ key][ i ] for i in range( len( self . content[ key ] ) ) ]
-            self . content[ key ] = tmp
-            self . update_digest()
-
-    def sub( self, other ) :
-        for key in [ 'A', 'C', 'G', 'T', 'N' ] :
-            tmp = [ self . content[ key ][ i ] - other . content[ key][ i ] for i in range( len( self . content[ key ] ) ) ]
-            self . content[ key ] = tmp
-            self . update_digest()
 
 # ---------------------------------------------------------------------------------------
 
@@ -299,18 +317,18 @@ def QCCHECK( acc ) :
     #compare fingerprint stored in metadata against fingerprint computed from bases
     from_meta = Fingerprint . extractFromMetaOfAccession( acc )
     from_data = Fingerprint . computeFromReadsOfAccession( acc )
+    print( f"simple comparison: { from_meta == from_data }" )
     print( FingerprintComp( from_meta, from_data ) )
 
     #example of verifying the history audit
     event1 = "QC/history/event_1/"
-    from_hist_orig = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}original/" )
-    if not from_hist_orig is None :
-        from_hist_added   = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}added/" )
-        from_hist_removed = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}removed/" )
-        from_hist_orig . add( from_hist_added )
-        from_hist_orig . sub( from_hist_removed )
-        from_hist_orig . src += " ... history audit"
-        print( FingerprintComp( from_meta, from_hist_orig ) )
+    hist_orig = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}original/" )
+    if not hist_orig is None :
+        hist_added   = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}added/" )
+        hist_removed = Fingerprint . extractFromMetaOfAccession( acc, f"{event1}removed/" )
+        res = hist_orig + hist_added - hist_removed
+        res . src += " ... history audit"
+        print( FingerprintComp( from_meta, res ) )
 
 if __name__ == "__main__":
     if len( sys.argv ) > 1 :
