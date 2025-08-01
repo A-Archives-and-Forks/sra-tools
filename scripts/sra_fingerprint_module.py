@@ -130,10 +130,9 @@ class Fingerprint :
     def __add__( self, other ) :
         if not isinstance( other, Fingerprint ) :
             return NotImplemented
-        fp = self . content
+        fp = dict( self . content )
         for key in [ 'A', 'C', 'G', 'T', 'N' ] :
             fp[ key ] = [ fp[ key ][ i ] + other . content[ key][ i ] for i in range( len( fp[ key ] ) ) ]
-            self . update_digest()
         data = { "fingerprint" : fp, "fingerprint-digest" : self . digest  }
         res = Fingerprint( data, self . src )
         res . update_digest()
@@ -142,10 +141,9 @@ class Fingerprint :
     def __sub__( self, other ) :
         if not isinstance( other, Fingerprint ) :
             return NotImplemented
-        fp = self . content
+        fp = dict( self . content )
         for key in [ 'A', 'C', 'G', 'T', 'N' ] :
             fp[ key ] = [ fp[ key ][ i ] - other . content[ key][ i ] for i in range( len( fp[ key ] ) ) ]
-            self . update_digest()
         data = { "fingerprint" : fp, "fingerprint-digest" : self . digest  }
         res = Fingerprint( data, self . src )
         res . update_digest()
