@@ -29,7 +29,10 @@ PREFETCH=$bin_dir/$prefetch
 
 echo Testing ${prefetch} to out file from ${bin_dir}...
 
-$PREFETCH SRR053325  -otmpfile > /dev/null 2>&1 
+rm -f tmpfile
+
+unset NCBI_VDB_PREFETCH_USES_OUTPUT_TO_FILE
+$PREFETCH SRR053325  -otmpfile > /dev/null 2>&1
 if [ "$?" = "0" ]; then
     echo "Downloading to outfile succeed"; exit 1
 fi
@@ -38,6 +41,6 @@ rm -f tmpfile
 
 NCBI_VDB_PREFETCH_USES_OUTPUT_TO_FILE= \
     $PREFETCH SRR053325  -otmpfile > /dev/null || exit 2
-rm tmpfile || exit 3
+rm -f tmpfile || exit 3
 
 echo test of ${prefetch} to out file succeed.
