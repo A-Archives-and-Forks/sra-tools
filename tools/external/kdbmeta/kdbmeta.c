@@ -106,6 +106,7 @@ static int tabsz = 2;
 static const char *spaces = "                                ";
 static bool as_unsigned = false;
 static bool as_valid_xml = true;
+static const char *delete_arg = NULL;
 static const char *table_arg = NULL;
 static bool read_only_arg = true;
 
@@ -831,6 +832,40 @@ bool CC md_select ( void *item, void *data )
     return fail;
 }
 
+static rc_t process_request(KDBMetaParms* pb) {
+    rc_t rc = 0, r2 = 0;
+
+    assert(pb);
+
+    if (delete_arg != NULL) {
+        CONST KMDataNode* node = NULL;
+        rc_t rc = KMetadataOpenNodeUpdate(pb->md, &node, NULL);
+        if (rc != 0) {
+            LOGERR(klogErr, rc, "failed to open metadata node");
+            return rc;
+        }
+        rc = KMDataNodeDropChild(node, "%s", delete_arg);
+        if (rc != 0)
+            PLOGERR(klogErr, (klogErr, rc,
+                "failed to delete node '$(node)'", "node=%s", delete_arg));
+    }
+    else {
+        if (VectorDoUntil(pb->q, false, md_select, pb))
+            rc = pb->rc;
+    }
+
+    r2 = KMetadataRelease(pb->md);
+    pb->md = NULL;
+    if (r2 != 0)
+        PLOGERR(klogErr, (klogErr, r2,
+            "failed update metadata while deleting node '$(node)'",
+            "node=%s", delete_arg == NULL ? "" : delete_arg));
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+
+    return rc;
+}
+
 static
 rc_t col_select ( KDBMetaParms * pb)
 {
@@ -868,14 +903,7 @@ rc_t col_select ( KDBMetaParms * pb)
             PLOGERR ( klogErr,  (klogErr, rc, "failed to open metadata for column '$(col)'", "col=%s", pb->targ ));
         else
         {
-            bool fail;
-
-            fail = VectorDoUntil ( pb -> q, false, md_select, pb );
-
-            if (fail)
-                rc = pb->rc;
-
-            KMetadataRelease ( pb -> md ), pb -> md = NULL;
+            rc = process_request ( pb );
         }
 
         KColumnRelease ( col );
@@ -923,13 +951,7 @@ rc_t tbl_select ( KDBMetaParms * pb)
             PLOGERR ( klogErr,  (klogErr, rc, "failed to open metadata for table '$(tbl)'", "tbl=%s", pb->targ ));
         else
         {
-            bool fail;
-
-            fail = VectorDoUntil ( pb -> q, false, md_select, pb );
-            if (fail)
-                rc = pb->rc;
-
-            KMetadataRelease ( pb -> md ), pb -> md = NULL;
+            rc = process_request ( pb );
         }
 
         KTableRelease ( tbl );
@@ -968,6 +990,7 @@ rc_t db_select (KDBMetaParms * pb)
             "db=%s", pb->targ ));
     }
     else {
+        rc_t r2 = 0;
         CONST KTable* tbl = NULL;
         if (table_arg) {
             read_only = true;
@@ -1024,16 +1047,15 @@ rc_t db_select (KDBMetaParms * pb)
                 }
             }
             if ( rc == 0 ) {
-                bool fail;
-
-                fail = VectorDoUntil ( pb -> q, false, md_select, pb );
-                if(fail)
-                    rc = pb->rc;
-                KMetadataRelease ( pb -> md ), pb -> md = NULL;
+                rc = process_request ( pb );
             }
         }
-        KTableRelease ( tbl );
-        KDatabaseRelease ( db );
+        r2 = KTableRelease ( tbl );
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+        r2 = KDatabaseRelease ( db );
+        if (r2 != 0 && rc == 0)
+            rc = r2;
     }
 
     return rc;
@@ -1110,6 +1132,10 @@ static const char *const q5 [] = { "<obj>=VALUE","a simple value assignment wher
                                    "values use hex escape codes", NULL };
 #endif
 
+#define ALIAS_DELETE             NULL
+#define OPTION_DELETE            "delete"
+static const char* USAGE_DELETE[] = { "delete node", NULL };
+
 #define ALIAS_READ_ONLY             "r"
 #define OPTION_READ_ONLY            "read-only"
 static const char* USAGE_READ_ONLY[] = { "operate in read-only mode", NULL };
@@ -1141,6 +1167,7 @@ const OptDef opt[] = {
 #endif
  ,{ OPTION_OUT      , ALIAS_OUT      , NULL, USAGE_OUT      , 1, true , false }
  ,{ OPTION_NGC      , ALIAS_NGC      , NULL, USAGE_NGC      , 1, true , false }
+ ,{ OPTION_DELETE   , ALIAS_DELETE   , NULL, USAGE_DELETE   , 1, true , false }
 };
 
 static const char * const * target_usage [] = { t1, t2, t3, t4 };
@@ -1193,7 +1220,9 @@ rc_t CC Usage (const Args * args)
     for(idx = 0; idx < sizeof(opt) / sizeof(opt[0]); ++idx) {
         const char *param = NULL;
         if (opt[idx].aliases == NULL) {
-            if (strcmp(opt[idx].name, OPTION_NGC) == 0)
+            if (strcmp(opt[idx].name, OPTION_DELETE) == 0)
+                param = "node";
+            else if (strcmp(opt[idx].name, OPTION_NGC) == 0)
                 param = "path";
         }
         else if (strcmp(opt[idx].aliases, ALIAS_TABLE) == 0) {
@@ -1208,6 +1237,8 @@ rc_t CC Usage (const Args * args)
     OUTMSG(("\n"));
 
     HelpOptionsStandard ();
+
+    OUTMSG(("\n"));
 
     HelpVersion (fullpath, KAppVersion());
 
@@ -1305,6 +1336,25 @@ MAIN_DECL( argc, argv )
                     }
 
                     KConfigSetNgcFile(dummy);
+                }
+            }
+
+/* OPTION_DELETE */
+            {
+#define ARG OPTION_DELETE
+                rc = ArgsOptionCount(args, ARG, &pcount);
+                if (rc != 0) {
+                    LOGERR(klogErr, rc, "Failure to get '" ARG "' argument");
+                    break;
+                }
+                if (pcount > 0) {
+                    rc = ArgsOptionValue(args, ARG, 0, 
+                        (const void**)&delete_arg);
+                    if (rc != 0) {
+                        LOGERR(klogErr, rc,
+                            "Failure to get '" ARG "' argument");
+                        break;
+                    }
                 }
             }
 

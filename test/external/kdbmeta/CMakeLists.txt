@@ -25,8 +25,14 @@
 if ( NOT WIN32 )
     ToolsRequired(kdbmeta)
 
-    add_test( NAME Test_Kdbmeta
+    add_test( NAME Test_Kdbmeta_bin
           COMMAND sh -c "NCBI_SETTINGS=/ ${DIRTOTEST}/kdbmeta SRR053325 > /dev/null"
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+    add_test( NAME Test_Kdbmeta_delete
+          COMMAND
+              ${CMAKE_COMMAND} -E env ${CONFIGTOUSE}=/
+              sh test-meta-delete.sh ${DIRTOTEST} kdbmeta
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
     add_test( NAME Test_Kdbmeta_update_expr
@@ -38,9 +44,15 @@ if ( NOT WIN32 )
           WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
     if( TARGET kdbmeta-asan )
-        add_test( NAME Test_Kdbmeta-asan
+        add_test( NAME Test_Kdbmeta_bin-asan
               COMMAND sh -c "${DIRTOTEST}/kdbmeta-asan SRR053325 > /dev/null"
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+        add_test( NAME Test_Kdbmeta_delete-asan
+          COMMAND
+              ${CMAKE_COMMAND} -E env ${CONFIGTOUSE}=/
+              sh test-meta-delete.sh ${DIRTOTEST} kdbmeta-asan
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
         add_test( NAME Test_Kdbmeta_update_expr-asan
               COMMAND sh -c "./test-update-expr.sh ${DIRTOTEST}/kdbmeta-asan"
@@ -51,9 +63,15 @@ if ( NOT WIN32 )
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
     endif()
     if( TARGET kdbmeta-tsan )
-        add_test( NAME Test_Kdbmeta-tsan
+        add_test( NAME Test_Kdbmeta_bin-tsan
               COMMAND sh -c "${DIRTOTEST}/kdbmeta-tsan SRR053325 > /dev/null"
               WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+        add_test( NAME Test_Kdbmeta_delete-tsan
+          COMMAND
+              ${CMAKE_COMMAND} -E env ${CONFIGTOUSE}=/
+              sh test-meta-delete.sh ${DIRTOTEST} kdbmeta-tsan
+          WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
         add_test( NAME Test_Kdbmeta_update_expr-tsan
               COMMAND sh -c "./test-update-expr.sh ${DIRTOTEST}/kdbmeta-tsan"
