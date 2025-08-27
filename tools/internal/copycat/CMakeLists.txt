@@ -48,7 +48,6 @@ if( ${OS} STREQUAL "linux" )
             ccsra
             ccsubchunk
             ccfile
-            cc-collect
             ../shared/teefile.c
             ${KFF_SRC}
         )
