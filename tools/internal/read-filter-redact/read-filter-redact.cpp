@@ -33,7 +33,7 @@
 #include <vdb/database.h> /* VDatabase */
 #include <vdb/manager.h> /* VDBManager */
 #include <vdb/schema.h> /* VSchemaRelease */
-#include <vdb/table.h> /* VDBTable */
+#include <vdb/table.h> /* VTable */
 #include <vdb/vdb-priv.h> /* VDatabaseIsCSRA */
 
 #include <kdb/manager.h> /* KDBPathType */
