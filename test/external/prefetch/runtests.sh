@@ -79,7 +79,7 @@ WGSF=${SRAF}:data/sracloud/traces/wgs03/WGS/AF/VF/AFVF01.1
 work_dir=$(pwd)
 #echo WORK DIRECTORY: ${work_dir}
 
-if [ "$NOT_ALL" == "" ]; then
+if [ "$NOT_ALL" = "" ]; then
 # ##############################################################################
 # echo s-option:
 mkdir -p tmp
@@ -670,7 +670,7 @@ cd tmp  && PATH=$bin_dir:$TESTBINDIR:$PATH NCBI_SETTINGS=/ VDB_CONFIG=k \
                                                                      || exit 631
 cd ${work_dir}                                                       || exit 632
 rm -r tmp                                                            || exit 633
-fi # if [ "$NOT_ALL" == "" ]
+fi # if [ "$NOT_ALL" = "" ]
 
 echo ad_not_cwd:
 echo Testing prefetch into output directory and using results
