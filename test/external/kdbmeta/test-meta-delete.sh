@@ -25,6 +25,7 @@ echo -n Testing --delete option of kdbmeta...
 
 bin_dir=$1
 kdbmeta=$2
+VERBOSE=$3
 tool=$1/$2
 
 rm -rf actual tmp || exit 2
@@ -40,6 +41,9 @@ if [ ! -f "$tool" ] ; then
 fi
 
 mkdir actual || exit 2
+if [ "$VERBOSE" != "" ] ; then
+    echo "$bin_dir/kar --extract test.sra --directory tmp"
+fi
 $bin_dir/kar --extract test.sra --directory tmp || exit 3
 
 ###################################### DB ######################################
@@ -47,10 +51,12 @@ $bin_dir/kar --extract test.sra --directory tmp || exit 3
 $tool tmp > actual/db || exit 4
 diff actual/db expected/db || exit 5
 
+if [ "$VERBOSE" != "" ] ; then echo "$tool tmp A/B=1" ; fi
 $tool tmp A/B=1 || exit 6
 $tool tmp > actual/db.AB || exit 7
 diff actual/db.AB expected/db.AB || exit 8
 
+if [ "$VERBOSE" != "" ] ; then echo "$tool tmp --delete schema" ; fi
 $tool tmp --delete schema || exit 9
 $tool tmp > actual/db.schema || exit 10
 diff actual/db.schema expected/db.schema || exit 11
