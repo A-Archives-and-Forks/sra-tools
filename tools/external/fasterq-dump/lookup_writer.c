@@ -165,16 +165,16 @@ static rc_t pack_4na( const String * unpacked, SBuffer_t * packed ) {
     if ( unpacked -> len < 1 ) {
         rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcNull );
     } else {
-        if ( unpacked -> len > 0xFFFF ) {
+        if ( unpacked -> len > MAX_DNA_LEN ) {
             rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcExcessive );
         } else {
             uint32_t i;
             uint8_t * src = ( uint8_t * )unpacked -> addr;
             uint8_t * dst = ( uint8_t * )packed -> S . addr;
-            uint16_t dna_len = ( unpacked -> len & 0xFFFF );
+            dna_len_t dna_len = ( unpacked -> len & MAX_DNA_LEN );
             uint32_t len = 0;
-            dst[ len++ ] = ( dna_len >> 8 );
-            dst[ len++ ] = ( dna_len & 0xFF );
+            memmove( dst, &dna_len, sizeof( dna_len_t ) );
+            len += sizeof( dna_len_t );
             for ( i = 0; i < unpacked -> len; ++i ) {
                 if ( len < packed -> buffer_size ) {
                     uint8_t base = ( src[ i ] & 0x0F );

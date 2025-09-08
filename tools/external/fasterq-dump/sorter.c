@@ -25,6 +25,7 @@
 */
 
 #include "sorter.h"
+#include "helper.h"
 
 #ifndef _h_err_msg_
 #include "err_msg.h"
@@ -156,16 +157,16 @@ static rc_t pack_read_2_4na( const String * bases, SBuffer_t * packed_bases ) {
     if ( bases -> len < 1 ) {
         rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcNull );
     } else {
-        if ( bases -> len > 0xFFFF ) {
+        if ( bases -> len > MAX_DNA_LEN ) {
             /* make sure that we have no more than max u16 bases, because we only use 2 bytes
                for that in the lookup-file! */
             rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcExcessive );
         } else {
             /* we have to down-convert from 32-bits to 16-bits */
-            const uint16_t num_bases = ( bases -> len & 0xFFFF );
+            const dna_len_t num_bases = ( bases -> len & MAX_DNA_LEN );
 
              /* 2 bases per byte + 2 bytes for num_bases + 2 bytes extra */
-            const uint16_t buffer_bytes_needed = ( num_bases / 2 ) + 4;
+            const dna_len_t buffer_bytes_needed = ( num_bases / 2 ) + 4;
 
              /* enlarge the buffer if needed */
             if ( packed_bases -> buffer_size < buffer_bytes_needed ) {
@@ -183,8 +184,8 @@ static rc_t pack_read_2_4na( const String * bases, SBuffer_t * packed_bases ) {
                 uint8_t * dst = ( uint8_t * )packed_bases -> S . addr;
 
                 /* write num_bases to the target */
-                dst[ dst_idx++ ] = ( num_bases >> 8 );
-                dst[ dst_idx++ ] = ( num_bases & 0xFF );
+                memmove( dst, &num_bases, sizeof( dna_len_t ) );
+                dst_idx = sizeof( dna_len_t );
 
                 /* for each base: encode to 4na and write ot buffer */
                 for ( src_idx = 0; src_idx < num_bases; ++src_idx ) {
