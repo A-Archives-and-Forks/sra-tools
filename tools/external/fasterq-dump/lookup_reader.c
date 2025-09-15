@@ -266,7 +266,7 @@ rc_t lookup_reader_get( struct lookup_reader_t * self, uint64_t * key, SBuffer_t
                     rc = SILENT_RC( rcVDB, rcNoTarg, rcReading, rcFormat, rcInvalid );
                     ErrMsg( "lookup_reader_get().KFileReadAll( at %ld, to_read %lu vs %lu )", self -> pos, sizeof buffer1, num_read );
                 } else {
-                    uint16_t dna_len;
+                    dna_len_t dna_len;
                     size_t to_read;
 
                     /* we get the key out of buffer1 */
