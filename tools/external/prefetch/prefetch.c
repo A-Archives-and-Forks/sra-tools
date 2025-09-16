@@ -2616,7 +2616,8 @@ static rc_t ItemInitResolved(Item *self, VResolver *resolver, KDirectory *dir,
                             self->mane->vfsMgr, &path, "%s", resolved);
                         if (rc == 0) {
                             const VPath* orig = path;
-                            VFSManagerCheckAd(self->mane->vfsMgr, path, &orig);
+                            VFSManagerCheckEnvAndAd(
+                                self->mane->vfsMgr, path, &orig);
                             if (path != orig) {
                                 RELEASE(VPath, path);
                                 path = (VPath*)orig;
