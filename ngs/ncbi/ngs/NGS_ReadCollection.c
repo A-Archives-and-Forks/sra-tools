@@ -47,7 +47,7 @@
 #include <vdb/database.h>
 #include <vdb/table.h>
 
-#include <vfs/manager.h> /* VFSManagerCheckEnvAndAd */
+#include <vfs/manager.h> /* VFSManagerCheckAd */
 #include <vfs/path.h> /* VPathRelease */
 
 #include <sra/sraschema.h>
@@ -593,7 +593,7 @@ NGS_ReadCollection * NGS_ReadCollectionMake ( ctx_t ctx, const char * spec )
             rc = VFSManagerMakePath(vfs, &path, "%s", spec);
             if (rc == 0) {
                 const VPath* orig = path;
-                VFSManagerCheckEnvAndAd(vfs, path, &orig);
+                VFSManagerCheckAd(vfs, path, &orig);
                 if (orig != path) {
                     const String* tmp = NULL;
                     rc = VPathMakeString(orig, &tmp);
