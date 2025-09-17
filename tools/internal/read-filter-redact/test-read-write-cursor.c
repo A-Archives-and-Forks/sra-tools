@@ -30,18 +30,20 @@ MAIN_DECL( argc, argv )
     if ( VdbInitialize( argc, argv, 0 ) )
         return VDB_INIT_FAILED;
 
-    const char table[] = "/home/klymenka/REDACT-IN";
+    char table[1024] = "";
     const char name[] = "READ_FILTER";
 
     rc_t rc = 0;
 
     bool locked = false;
 
-    VDBManager* mgr;
-    VTable *tbl;
+    VDBManager* mgr = NULL;
+    VTable *tbl = NULL;
     const VCursor *rCursor = NULL;
 
     int i;
+
+    sprintf(table, "%s/REDACT-IN", getenv("HOME"));
 
     LogLevelSet("info");
 
