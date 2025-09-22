@@ -64,7 +64,6 @@ typedef struct lookup_producer_t {
     atomic64_t * processed_row_count;
     uint32_t chunk_id, sub_file_id;
     size_t buf_size, mem_limit;
-    bool single;
 } lookup_producer_t;
 
 
@@ -157,48 +156,42 @@ static rc_t pack_read_2_4na( const String * bases, SBuffer_t * packed_bases ) {
     if ( bases -> len < 1 ) {
         rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcNull );
     } else {
-        if ( bases -> len > MAX_DNA_LEN ) {
-            /* make sure that we have no more than max u16 bases, because we only use 2 bytes
-               for that in the lookup-file! */
-            rc = RC( rcVDB, rcNoTarg, rcWriting, rcFormat, rcExcessive );
-        } else {
-            const dna_len_t num_bases = ( bases -> len & MAX_DNA_LEN );
-            const dna_len_t buffer_bytes_needed = ( num_bases / 2 ) + sizeof( dna_len_t ) + 2;
+        const dna_len_t dna_len = bases -> len;
+        const dna_len_t buffer_bytes_needed = ( dna_len / 2 ) + sizeof( dna_len_t ) + 2;
 
-             /* enlarge the buffer if needed */
-            if ( packed_bases -> buffer_size < buffer_bytes_needed ) {
-                rc = increase_SBuffer_to( packed_bases, buffer_bytes_needed );
-                if ( 0 != rc ) {
-                    ErrMsg( "sorter.c pack_read_2_4na() cannot increase buffer from %u to %u",
-                            packed_bases -> buffer_size, buffer_bytes_needed );
-                }
+        /* enlarge the buffer if needed */
+        if ( packed_bases -> buffer_size < buffer_bytes_needed ) {
+            rc = increase_SBuffer_to( packed_bases, buffer_bytes_needed );
+            if ( 0 != rc ) {
+                ErrMsg( "sorter.c pack_read_2_4na() cannot increase buffer from %u to %u",
+                        packed_bases -> buffer_size, buffer_bytes_needed );
             }
+        }
 
-            if ( 0 == rc ) {
-                uint8_t * dst = ( uint8_t * )packed_bases -> S . addr;
+        if ( 0 == rc ) {
+            uint8_t * dst = ( uint8_t * )packed_bases -> S . addr;
 
-                /* write the leading num_bases to the target */
-                memcpy( dst, &num_bases, sizeof num_bases );
-                {
-                    uint32_t src_idx;
-                    uint32_t dst_idx = sizeof( dna_len_t );
-                    const uint8_t * src = ( uint8_t * )bases -> addr;
-                    /* for each base: encode to 4na and write ot buffer */
-                    for ( src_idx = 0; src_idx < num_bases; ++src_idx ) {
-                        if ( dst_idx < packed_bases -> buffer_size ) {
-                            uint8_t base = ( xASCII_to_4na[ src[ src_idx ] ] & 0x0F );
-                            if ( 0 == ( src_idx & 0x01 ) ) {
-                                dst[ dst_idx ] = ( base << 4 );
-                            } else {
-                                dst[ dst_idx++ ] |= base;
-                            }
+            /* write the leading num_bases to the target */
+            memcpy( dst, &dna_len, sizeof dna_len );
+            {
+                uint32_t src_idx;
+                uint32_t dst_idx = sizeof( dna_len );
+                const uint8_t * src = ( uint8_t * )bases -> addr;
+                /* for each base: encode to 4na and write ot buffer */
+                for ( src_idx = 0; src_idx < dna_len; ++src_idx ) {
+                    if ( dst_idx < packed_bases -> buffer_size ) {
+                        uint8_t base = ( xASCII_to_4na[ src[ src_idx ] ] & 0x0F );
+                        if ( 0 == ( src_idx & 0x01 ) ) {
+                            dst[ dst_idx ] = ( base << 4 );
+                        } else {
+                            dst[ dst_idx++ ] |= base;
                         }
                     }
-                    /* if we have not finished a whole byte - increase the lenght! */
-                    if ( bases -> len & 0x01 ) { dst_idx++; }
-                    /* set the length into the String... */
-                    packed_bases -> S . size = packed_bases -> S . len = dst_idx;
                 }
+                /* if we have not finished a whole byte - increase the lenght! */
+                if ( bases -> len & 0x01 ) { dst_idx++; }
+                /* set the length into the String... */
+                packed_bases -> S . size = packed_bases -> S . len = dst_idx;
             }
         }
     }
@@ -329,7 +322,6 @@ rc_t execute_lookup_production( const lookup_production_args_t * args ) {
                         producer -> sub_file_id     = 0;
                         producer -> buf_size        = args -> buf_size;
                         producer -> mem_limit       = args -> mem_limit;
-                        producer -> single          = false;
                         producer -> processed_row_count = &processed_row_count;
 
                         cip . dir                = args -> dir;

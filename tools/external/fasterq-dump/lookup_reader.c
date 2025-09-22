@@ -266,48 +266,50 @@ rc_t lookup_reader_get( struct lookup_reader_t * self, uint64_t * key, SBuffer_t
                     rc = SILENT_RC( rcVDB, rcNoTarg, rcReading, rcFormat, rcInvalid );
                     ErrMsg( "lookup_reader_get().KFileReadAll( at %ld, to_read %lu vs %lu )", self -> pos, sizeof buffer1, num_read );
                 } else {
-                    dna_len_t dna_len;
-                    size_t to_read;
+                    dna_len_t dna_bases;
 
                     /* we get the key out of buffer1 */
                     memcpy( key, buffer1, sizeof *key );
-
                     /* we get the dna-len out of buffer1 */
-                    memcpy( &dna_len, &( buffer1[ sizeof *key ] ), sizeof dna_len );
+                    memcpy( &dna_bases, &( buffer1[ sizeof *key ] ), sizeof dna_bases );
 
                     /* adjust the number of bytes to read to the half of the dna_len */
-                    to_read = ( dna_len & 1 ) ? ( dna_len + 1 ) >> 1 : dna_len >> 1;
-                    if ( 0 == to_read ) {
+                    if ( 0 == dna_bases ) {
                         rc = SILENT_RC( rcVDB, rcNoTarg, rcReading, rcFormat, rcInvalid );
                         ErrMsg( "lookup_reader_get() to_read == 0 at %lu, key = %lu", self -> pos, *key );
                         packed_bases -> S . size = 0;
                         packed_bases -> S . len = 0;
-                        self -> pos += ( sizeof ( *key ) + sizeof( dna_len ) );
+                        self -> pos += ( sizeof ( *key ) + sizeof( dna_bases ) );
                     } else {
+                        size_t dna_bytes = ( dna_bases / 2 );
+                        if ( 1 == ( dna_bases & 1 ) ) { dna_bytes++; }
                         /* maybe we have to increase the size of the SBuffer, after seeing the real dna-length */
-                        if ( packed_bases -> buffer_size < ( to_read + 2 ) ) {
-                            rc = increase_SBuffer( packed_bases, ( to_read + 2 ) - packed_bases -> buffer_size );
+                        if ( packed_bases -> buffer_size < ( dna_bytes + sizeof dna_bases ) ) {
+                            rc = increase_SBuffer_to( packed_bases, dna_bytes + dna_bases );
                         }
                         if ( 0 == rc ) {
                             uint8_t * dst = ( uint8_t * )( packed_bases -> S . addr );
 
-                            /* we write the dna-len into the first 2 bytes of the destination */
-                            memcpy( dst, &( buffer1[ sizeof *key ] ), sizeof dna_len );
-                            dst += sizeof dna_len;
+                            /* we write the dna-base-count into the first 4 bytes of the destination */
+                            memcpy( dst, &( buffer1[ sizeof *key ] ), sizeof dna_bases );
+                            dst += sizeof dna_bases;
 
-                            rc = KFileReadAll( self -> f, self -> pos + ( sizeof * key ) + sizeof( dna_len ),
-                                                dst, to_read, &num_read );
+                            rc = KFileReadAll( self -> f,
+                                                self -> pos + ( sizeof * key ) + sizeof( dna_bases ),
+                                                dst,
+                                                dna_bytes,
+                                                &num_read );
                             if ( 0 != rc ) {
                                 ErrMsg( "lookup_reader_get().KFileReadAll( at %ld, to_read %u ) -> %R",
-                                        self -> pos + sizeof( *key ) + sizeof( dna_len ) , to_read, rc );
-                            } else if ( num_read != to_read ) {
+                                        self -> pos + sizeof( *key ) + sizeof( dna_bases ) , dna_bytes, rc );
+                            } else if ( num_read != dna_bytes ) {
                                 rc = RC( rcVDB, rcNoTarg, rcReading, rcFormat, rcInvalid );
                                 ErrMsg( "lookup_reader_get().KFileReadAll( %ld ) %d vs %d -> %R",
-                                        self -> pos + sizeof( *key ) + sizeof( dna_len), num_read, to_read, rc );
+                                        self -> pos + sizeof( *key ) + sizeof( dna_bases ), num_read, dna_bases, rc );
                             } else {
-                                packed_bases -> S . size = num_read + sizeof( dna_len );
+                                packed_bases -> S . size = num_read + sizeof( dna_bases );
                                 packed_bases -> S . len = ( uint32_t )packed_bases -> S . size;
-                                self -> pos += ( num_read + sizeof( *key ) + sizeof( dna_len ) );
+                                self -> pos += ( sizeof( *key ) + sizeof( dna_bases ) + dna_bytes );
                             }
                         }
                     }

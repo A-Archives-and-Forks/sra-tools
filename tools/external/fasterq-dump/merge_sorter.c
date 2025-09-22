@@ -216,7 +216,7 @@ static rc_t run_merge_sorter( merge_sorter_t * self ) {
     a batch of jobs. It then processes this batch by merge-sorting the content of
     the KVector's into a temporary file. The entries are key-value pairs with a 64-bit
     key which is composed from the SEQID and one bit: first or second read in a spot.
-    The value is the packed READ ( pack_4na() in helper.c ).
+    The value is the packed READ ( pack_4na() in lookup_writer.c ).
     The background-merger terminates when it's input-queue is sealed in perform_fastdump()
     in fastdump.c after all sorter-threads ( producers ) have been joined.
     The final output of the background-merger is a list of temporary files produced
@@ -326,7 +326,6 @@ static bg_vec_merge_src_t * get_min_bg_vec_merge_src( bg_vec_merge_src_t * batch
 static rc_t write_bg_vec_merge_src( bg_vec_merge_src_t * src, struct lookup_writer_t * writer ) {
     rc_t rc = src -> rc;
     if ( 0 == rc ) {
-        //if ( src -> key > 34000000 ) { KOutMsg( "\n!!!WBVMS key:%lu \n", src -> key ); }
         rc = write_packed_to_lookup_writer( writer, src -> key, src -> bases ); /* lookup_writer.c */
         StringWhack ( src -> bases );
         src -> bases = NULL;
@@ -407,7 +406,7 @@ static rc_t background_vector_merger_process_batch( background_vector_merger_t *
         ErrMsg( "merge_sorter.c background_vector_merger_process_batch() -> %R", rc );
     } else {
         STATUS ( STAT_USR, "batch output filename is : %s", buffer );
-        rc = clt_add_file( self -> cleanup_task, buffer );
+        rc = clt_add_file( self -> cleanup_task, buffer ); // cleanup_task.c
 
         if ( 0 == rc ) {
             struct lookup_writer_t * writer; /* lookup_writer.h */
@@ -574,7 +573,7 @@ rc_t push_to_background_vector_merger( background_vector_merger_t * self, KVecto
     a batch of jobs. It then processes this batch by merge-sorting the content of
     the the files into a temporary file. The file-entries are key-value pairs with a 64-bit
     key which is composed from the SEQID and one bit: first or second read in a spot.
-    The value is the packed READ ( pack_4na() in helper.c ).
+    The value is the packed READ ( pack_4na() in lookup_writer.c ).
     The background-merger terminates when it's input-queue is sealed in perform_fastdump()
     in fastdump.c after all background-vector-merger-threads ( producers ) have been joined.
     The final output of the background-merger is a list of temporary files produced
