@@ -95,6 +95,13 @@ if ( NOT WIN32 )
 
     endif()
 
+    if ( BUILD_TOOLS_TEST_TOOLS AND BUILD_TOOLS_INTERNAL )
+        ToolsRequired(fasterq-dump rnd2sra)
+        add_test( NAME Test_FasterqDump_LongReads
+            COMMAND sh -c ./longreads.sh ${BINDIR}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+    endif()
+
 else()
 #TODO: make run on Windows
 endif()
