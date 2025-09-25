@@ -35,7 +35,7 @@
 
 #include <kdb/manager.h> /* kptDatabase */
 
-#include <kfg/kart.h> /* Kart */
+#include <kfg/kart-priv.h> /* KDirectory_IsKartFile */
 #include <kfg/repository.h> /* KRepositoryMgr */
 
 #include <kfs/cacheteefile.h> /* KDirectoryMakeCacheTee */
@@ -2601,15 +2601,36 @@ static rc_t ItemInitResolved(Item *self, VResolver *resolver, KDirectory *dir,
             bool local = false;
             KPathType type
                 = KDirectoryPathType(dir, "%s", self->desc) & ~kptAlias;
-            if (type == kptFile) {
+            if (type == kptFile || type == kptDir) {
                 char resolved[PATH_MAX] = "";
                 rc = KDirectoryResolvePath(dir, true, resolved, sizeof resolved,
                     "%s", self->desc);
                 if (rc == 0) {
-                    local = true;
-                    rc = VFSManagerMakePath((VFSManager*)1, &path,
-                        "%s", resolved);
-                } /* else rc is ignored */
+                    if (type == kptFile) {
+                        local = true;
+                        rc = VFSManagerMakePath(
+                            self->mane->vfsMgr, &path, "%s", resolved);
+                    }
+                    else if (type == kptDir) {
+                        rc = VFSManagerMakePath(
+                            self->mane->vfsMgr, &path, "%s", resolved);
+                        if (rc == 0) {
+                            const VPath* orig = path;
+                            VFSManagerCheckEnvAndAd(
+                                self->mane->vfsMgr, path, &orig);
+                            if (path != orig) {
+                                RELEASE(VPath, path);
+                                path = (VPath*)orig;
+                                local = true;
+                            }
+                            else
+                                RELEASE(VPath, path);
+                        }
+                        else
+                            rc = 0;
+                    }
+                }
+                else rc = 0;
             }
 
             if (local) {
@@ -3574,18 +3595,14 @@ IteratorInit(Iterator *self, const char *obj, const PrfMain *mane)
     assert(obj);
     type = KDirectoryPathType(mane->dir, "%s", obj);
     if ((type & ~kptAlias) == kptFile) {
-        type = VDBManagerPathType(mane->mgr, "%s", obj);
-        if ((type & ~kptAlias) == kptFile) {
+        rc = KDirectory_IsKartFile(mane->dir, &self->isKart, obj);
+        if (rc == 0 && self->isKart) {
             rc = KartMakeWithNgc(mane->dir, obj, &self->kart, &self->isKart,
                 mane->ngc);
-            if (rc != 0) {
-                if (self->isKart)
-                    PLOGERR(klogErr, (klogErr, rc,
-                        "Cannot open kart '$(kart)' with ngc '$(ngc)'",
-                        "kart=%s,ngc=%s", obj, mane->ngc));
-                else
-                    rc = 0;
-            }
+            if (rc != 0)
+                PLOGERR(klogErr, (klogErr, rc,
+                    "Cannot open kart '$(kart)' with ngc '$(ngc)'",
+                    "kart=%s,ngc=%s", obj, mane->ngc));
         }
     }
 
