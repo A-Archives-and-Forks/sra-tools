@@ -37,6 +37,6 @@ add_subdirectory( sam-analyze )
 if( NOT WIN32 )
     add_subdirectory( pileup-stats )
     add_subdirectory( qa-stats )
+    add_subdirectory( rnd2sra )
 endif()
 
-add_subdirectory( rnd2sra )
