@@ -22,14 +22,9 @@
 #
 # ===========================================================================
 
-cmake_minimum_required (VERSION 3.8)
-
-project(rnd2sra)
-
 GenerateExecutableWithDefs( rnd2sra
     src/rnd2sra.cpp
     ""
     ""
     "${COMMON_LINK_LIBRARIES};${COMMON_LIBS_WRITE};stdc++fs" )
-
-target_compile_features( rnd2sra PRIVATE cxx_std_17 )
+MakeLinksExe( rnd2sra false )
