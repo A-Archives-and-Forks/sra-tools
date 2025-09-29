@@ -39,7 +39,7 @@ if [ "$OS" == "Darwin" ]
 then
     MD5="/sbin/md5 -q"
 else
-    MD5="md5sum -b"
+    MD5="md5sum"
 fi 
 
 mkdir -p $SANDBOX
