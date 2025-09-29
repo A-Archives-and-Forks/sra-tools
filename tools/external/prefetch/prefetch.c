@@ -2601,36 +2601,20 @@ static rc_t ItemInitResolved(Item *self, VResolver *resolver, KDirectory *dir,
             bool local = false;
             KPathType type
                 = KDirectoryPathType(dir, "%s", self->desc) & ~kptAlias;
-            if (type == kptFile || type == kptDir) {
+            if (type == kptFile) {
                 char resolved[PATH_MAX] = "";
                 rc = KDirectoryResolvePath(dir, true, resolved, sizeof resolved,
                     "%s", self->desc);
                 if (rc == 0) {
-                    if (type == kptFile) {
-                        local = true;
-                        rc = VFSManagerMakePath(
-                            self->mane->vfsMgr, &path, "%s", resolved);
-                    }
-                    else if (type == kptDir) {
-                        rc = VFSManagerMakePath(
-                            self->mane->vfsMgr, &path, "%s", resolved);
-                        if (rc == 0) {
-                            const VPath* orig = path;
-                            VFSManagerCheckEnvAndAd(
-                                self->mane->vfsMgr, path, &orig);
-                            if (path != orig) {
-                                RELEASE(VPath, path);
-                                path = (VPath*)orig;
-                                local = true;
-                            }
-                            else
-                                RELEASE(VPath, path);
-                        }
-                        else
-                            rc = 0;
-                    }
-                }
-                else rc = 0;
+                    local = true;
+                    rc = VFSManagerMakePath(self->mane->vfsMgr, &path,
+                        "%s", resolved);
+                } /* else rc is ignored */
+            }
+            else if (type == kptDir) {
+                uint32_t l = string_size(self->desc);
+                for (; l > 1 && self->desc[l - 1] == '/'; --l)
+                    ((char*)(self->desc))[l - 1] = '\0';
             }
 
             if (local) {

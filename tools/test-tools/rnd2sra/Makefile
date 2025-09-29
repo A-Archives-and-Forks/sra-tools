@@ -22,17 +22,9 @@
 #
 # ===========================================================================
 
-include_directories(${CMAKE_SOURCE_DIR})
+TOP ?= $(abspath ../../..)
+MODULE = tools/test-tools/rnd2sra
 
-set( SRC
-    sqlite3.c
-    sqlite3vdb.c
-)
-GenerateStaticLibsWithDefs( vdb-sqlite "${SRC}" "__mod__=\"libs/vdb-sqlite\"" "" )
+BUILD_TOOLS_TEST_TOOLS = ON
 
-if ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
-    set( CMAKE_C_FLAGS "-Wno-deprecated-declarations" )
-    set_source_files_properties( sqlite3.c PROPERTIES COMPILE_FLAGS -Wno-implicit-int-float-conversion )
-elseif( CMAKE_CXX_COMPILER_ID MATCHES "GNU" )
-    set_source_files_properties( sqlite3.c PROPERTIES COMPILE_FLAGS -Wno-misleading-indentation )
-endif()
+include $(TOP)/build/Makefile.env
